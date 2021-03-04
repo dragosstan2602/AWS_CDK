@@ -1,0 +1,7 @@
+README.md
+setup.py
+create_basic_vpc/create_basic_vpc.egg-info/PKG-INFO
+create_basic_vpc/create_basic_vpc.egg-info/SOURCES.txt
+create_basic_vpc/create_basic_vpc.egg-info/dependency_links.txt
+create_basic_vpc/create_basic_vpc.egg-info/requires.txt
+create_basic_vpc/create_basic_vpc.egg-info/top_level.txt
