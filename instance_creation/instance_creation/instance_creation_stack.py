@@ -40,7 +40,6 @@ class InstanceCreationStack(core.Stack):
                                          tags=[core.CfnTag(key="Name", value="SG_Public")])
 
         my_home_ip = requests.get("https://api.ipify.org").text
-        # my_home_ip = "94.112.113.195"
 
         ports_pub = {'tcp': [22, 80],
                      'icmp': [-1]
