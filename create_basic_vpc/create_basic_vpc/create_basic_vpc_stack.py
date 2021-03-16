@@ -58,11 +58,6 @@ class CreateBasicVpcStack(core.Stack):
                                     vpc_id=vpc.vpc_id,
                                     internet_gateway_id=igw.ref)
 
-        # Add a route to a route table
-        default_route = ec2.CfnRoute(self, id="DefaultRoute",
-                                     route_table_id=public_rt.ref,
-                                     destination_cidr_block="0.0.0.0/0",
-                                     gateway_id=igw.ref)
         # Elastic IP
         eip_01 = ec2.CfnEIP(self, id="EIP01")
 
@@ -74,8 +69,18 @@ class CreateBasicVpcStack(core.Stack):
 
         ngw.add_depends_on(eip_01)
 
-        # Security Groups #
+        # Add a route to a route table
+        default_route_public = ec2.CfnRoute(self, id="DefaultRoutePublic",
+                                     route_table_id=public_rt.ref,
+                                     destination_cidr_block="0.0.0.0/0",
+                                     gateway_id=igw.ref)
 
+        default_route_private = ec2.CfnRoute(self, id="DefaultRouteprivate",
+                                            route_table_id=private_rt.ref,
+                                            destination_cidr_block="0.0.0.0/0",
+                                            gateway_id=ngw.ref)
+
+        ### Security Groups ###
         # PUBLIC SUBNET SG
         sg_public = ec2.CfnSecurityGroup(self, id="SG_PUBLIC",
                                          group_description="SG for the Public Subnet",
@@ -138,11 +143,22 @@ class CreateBasicVpcStack(core.Stack):
                                             source_security_group_id=sg_public.ref)
 
         ### EC2 Instances ###
+        # Generate some user data _ WIP
+        # user_data = ec2.UserData.custom
+
         # One in the public subnet
-        webserver1 = ec2.CfnInstance(self, id="WebServer01",
+        webserver01 = ec2.CfnInstance(self, id="WebServer01",
                                      image_id="ami-0de9f803fcac87f46",
                                      instance_type="t2.micro",
                                      subnet_id=web_subnet.ref,
                                      key_name="proton_mail_kp",
                                      security_group_ids=[sg_public.ref],
                                      tags=[core.CfnTag(key="Name", value="WebServer01")])
+
+        appserver01 = ec2.CfnInstance(self, id="AppServer01",
+                                             image_id="ami-0de9f803fcac87f46",
+                                             instance_type="t2.micro",
+                                             subnet_id=app_subnet.ref,
+                                             key_name="proton_mail_kp",
+                                             security_group_ids=[sg_private.ref],
+                                             tags=[core.CfnTag(key="Name", value="AppServer01")])
