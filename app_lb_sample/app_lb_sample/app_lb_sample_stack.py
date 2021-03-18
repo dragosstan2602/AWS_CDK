@@ -1,6 +1,7 @@
 from aws_cdk import core
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_elasticloadbalancingv2 as elbv2
+from aws_cdk.aws_elasticloadbalancingv2 import CfnListener as Listener
 import requests
 
 
@@ -78,8 +79,8 @@ class AppLbSampleStack(core.Stack):
                                        vpc_id=vpc.vpc_id,
                                        tags=[core.CfnTag(key="Name", value="SG_Instances")])
 
-        my_home_ip = requests.get("https://api.ipify.org").text
-
+        # my_home_ip = requests.get("https://api.ipify.org").text
+        my_home_ip = "94.112.113.195"
         ports_pub = {'tcp': [22, 80],
                      'icmp': [-1]
                      }
@@ -105,6 +106,14 @@ class AppLbSampleStack(core.Stack):
         with open("/home/dragos/Documents/AWS_CDK/app_lb_sample/app_lb_sample/configure.sh", 'r') as config_file:
             ud = core.Fn.base64(config_file.read())
 
+        bastion_host = ec2.CfnInstance(self, id="bastion",
+                                       image_id="ami-0de9f803fcac87f46",
+                                       instance_type="t2.micro",
+                                       subnet_id=pub_subnet.subnet_id,
+                                       key_name="proton_mail_kp",
+                                       security_group_ids=[sg_lb.ref],
+                                       tags=[core.CfnTag(key="Name", value="bastion")])
+
         instance01 = ec2.CfnInstance(self, id="WebServer01",
                                      image_id="ami-0de9f803fcac87f46",
                                      instance_type="t2.micro",
@@ -123,16 +132,48 @@ class AppLbSampleStack(core.Stack):
                                      user_data=ud,
                                      tags=[core.CfnTag(key="Name", value="WebServer02")])
 
-        health_check = elbv2.HealthCheck(enabled=True,
-                                         healthy_http_codes="200",
-                                         path="/index.html",
-                                         protocol=elbv2.Protocol("HTTP"))
+        # health_check = elbv2.HealthCheck(enabled=True,
+        #                                  healthy_http_codes="200",
+        #                                  path="/index.html",
+        #                                  protocol=elbv2.Protocol("HTTP"))
 
-        tg = elbv2.ApplicationTargetGroup(self, id="TG-WEB-HTTP",
-                                          port=80,
-                                          protocol=elbv2.ApplicationProtocol("HTTP"),
-                                          target_group_name="TG-WEB-HTTP",
-                                          target_type=elbv2.TargetType("INSTANCE"),
-                                          vpc=vpc.vpc_id,
-                                          health_check=health_check,
-                                          targets=[])
+        target01 = elbv2.CfnTargetGroup.TargetDescriptionProperty(id=instance01.ref)
+        target02 = elbv2.CfnTargetGroup.TargetDescriptionProperty(id=instance02.ref)
+
+        tg = elbv2.CfnTargetGroup(self, id="TG-WEB-HTTP",
+                                  name="TG-WEB-HTTP",
+                                  health_check_enabled=True,
+                                  health_check_path="/index.html",
+                                  health_check_port="80",
+                                  matcher=elbv2.CfnTargetGroup.MatcherProperty(http_code="200"),
+                                  port=80,
+                                  protocol="HTTP", # CASE SENSITIVE
+                                  target_type="instance", # CASE SENSITIVE
+                                  targets=[target01, target02],
+                                  vpc_id=vpc.vpc_id)
+
+        alb = elbv2.CfnLoadBalancer(self, id="MyALB-HTTP",
+                                    ip_address_type="ipv4",
+                                    name="MyALB-HTTP",
+                                    scheme="internet-facing",
+                                    security_groups=[sg_lb.ref],
+                                    type="application",
+                                    subnets=[subnet01.subnet_id, subnet02.subnet_id])
+
+        def_act = Listener.ActionProperty(
+            type="forward",
+            authenticate_cognito_config=None,
+            authenticate_oidc_config=None,
+            fixed_response_config=None,
+            forward_config=None,
+            order=50000,
+            redirect_config=None,
+            target_group_arn=tg.ref
+        )
+
+        listener = elbv2.CfnListener(self, id="Listener01",
+                                     load_balancer_arn=alb.ref,
+                                     port=80,
+                                     protocol="HTTP",
+                                     default_actions=[def_act])
+
