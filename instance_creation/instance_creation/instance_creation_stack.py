@@ -65,5 +65,5 @@ class InstanceCreationStack(core.Stack):
                                    key_name="proton_mail_kp",
                                    security_group_ids=[sg_public.ref],
                                    tags=[core.CfnTag(key="Name", value="MyInstance")])
-
+        # COMMENT
         instance.user_data = ud
