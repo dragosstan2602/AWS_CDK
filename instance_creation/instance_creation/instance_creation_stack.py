@@ -1,6 +1,6 @@
 from aws_cdk import core
 from aws_cdk import aws_ec2 as ec2
-import requests, base64
+import requests
 
 
 class InstanceCreationStack(core.Stack):

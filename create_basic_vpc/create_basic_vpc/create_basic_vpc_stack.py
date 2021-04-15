@@ -75,10 +75,14 @@ class CreateBasicVpcStack(core.Stack):
                                      destination_cidr_block="0.0.0.0/0",
                                      gateway_id=igw.ref)
 
+        default_route_public.add_depends_on(igw)
+
         default_route_private = ec2.CfnRoute(self, id="DefaultRouteprivate",
                                             route_table_id=private_rt.ref,
                                             destination_cidr_block="0.0.0.0/0",
-                                            gateway_id=ngw.ref)
+                                            nat_gateway_id=ngw.ref)
+
+        default_route_private.add_depends_on(ngw)
 
         ### Security Groups ###
         # PUBLIC SUBNET SG
